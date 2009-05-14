@@ -8,6 +8,20 @@ module Bob
         end
       end
 
+      def head
+        `git ls-remote --heads #{uri} #{branch} | cut -f1`.chomp
+      end
+
+      protected
+
+      def path_from_uri
+        path = uri.path.
+          gsub(/\~[a-z0-9]*\//i, ""). # remove ~foobar/
+          gsub(/\s+|\.|\//, "-").     # periods, spaces, slashes -> hyphens
+          gsub(/^-+|-+$/, "")         # remove trailing hyphens
+        path += "-#{branch}"
+      end
+
       private
 
       def update_code
@@ -19,10 +33,8 @@ module Bob
       end
 
       def clone
-        git "clone #{uri} #{working_dir}"
-      rescue CantRunCommand
         FileUtils.rm_r working_dir
-        retry
+        run "git clone #{uri} #{working_dir}", false
       end
 
       def fetch
@@ -32,10 +44,6 @@ module Bob
       def checkout(commit_id)
         # First checkout the branch just in case the commit_id turns out to be HEAD or other non-sha identifier
         git "checkout origin/#{branch}"
-        git "reset --hard #{commit_id}"
-      end
-
-      def reset(commit_id)
         git "reset --hard #{commit_id}"
       end
 

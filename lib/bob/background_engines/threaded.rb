@@ -1,4 +1,5 @@
-require 'thread'
+require "thread"
+
 module Bob
   module BackgroundEngines
     # A thread pool based build engine. This engine simply adds jobs to an 
@@ -38,22 +39,27 @@ module Bob
             @m = Mutex.new
             @v = v
           end
+
           # Add the given value to self, default 1.
           def inc(v = 1)
             sync { @v += v }
           end
+
           # Subtract the given value to self, default 1.
           def dec(v = 1)
             sync { @v -= v }
           end
+
           # Simply shows the value inspect for convenience.
           def inspect
             @v.inspect
           end
+
           # Extract the value.
           def to_i
             @v
           end
+
           private
           # Wrap the given block in a mutex.
           def sync(&b)
@@ -69,8 +75,11 @@ module Bob
         # Set the size of the thread pool. Asynchronously run down threads
         # that are no longer required, and synchronously spawn new required
         # threads.
+        attr_reader :size, :jobs
+
         def size=(other)
           @size = other
+
           if @workers.size > @size
             (@workers.size - @size).times do
               @workers.shift[:run] = false
@@ -85,8 +94,8 @@ module Bob
         # Default pool size is 2 threads.
         def initialize(size = nil)
           size ||= 2
-          @jobs = Queue.new
-          @njobs = Incrementor.new
+          @jobs    = Queue.new
+          @njobs   = Incrementor.new
           @workers = Array.new(size) { spawn }
         end
 
@@ -94,13 +103,15 @@ module Bob
         # responding to call, and/or a block.
         def add(*jobs, &blk)
           jobs = jobs + Array(blk)
+
           jobs.each do |job|
             @jobs << job
             @njobs.inc
           end
         end
-        alias push add
-        alias :<< add
+
+        alias_method :push, :add
+        alias_method :<<,   :add
 
         # A peak at the number of jobs in the queue. N.B. May differ, but 
         # should be more accurate than +jobs.size+.
@@ -109,12 +120,14 @@ module Bob
         end
 
         private
+
         # Create a new thread and return it. The thread will run until the 
         # thread-local value +:run+ is changed to false or nil.
         def spawn
           Thread.new do
             c = Thread.current
             c[:run] = true
+
             while c[:run]
               @jobs.pop.call
               @njobs.dec

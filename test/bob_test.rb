@@ -1,70 +1,22 @@
 require File.dirname(__FILE__) + "/helper"
 
 class BobTest < Test::Unit::TestCase
-  describe "Building a git repository" do
-    attr_accessor :repo, :commit_id, :buildable
+  test "directory" do
+    Bob.directory = "/foo/bar"
+    assert_equal "/foo/bar", Bob.directory
+  end
 
-    setup do
-      @repo      = git_repo(:test_repo)
-      @repo.create
-      @commit_id = repo.commits.first[:identifier]
-      @buildable = StubBuildable.new(@repo.name)
-    end
+  test "logger" do
+    logger = Logger.new("/tmp/bob.log")
+    Bob.logger = logger
 
-    test "with a successful build" do
-      Bob.build(buildable, commit_id)
+    assert_same logger, Bob.logger
+  end
 
-      status, output = buildable.builds[commit_id]
-      assert_equal :successful,          status
-      assert_equal "Running tests...\n", output
+  test "engine" do
+    engine = Object.new
+    Bob.engine = engine
 
-      commit = buildable.metadata[commit_id]
-      assert_equal "This commit will work", commit[:message]
-      assert_equal Time.now.min,            commit[:committed_at].min
-    end
-
-    test "with a failed build" do
-      repo.add_failing_commit
-      commit_id = repo.commits.first[:identifier]
-
-      Bob.build(buildable, commit_id)
-
-      status, output = buildable.builds[commit_id]
-      assert_equal :failed,              status
-      assert_equal "Running tests...\n", output
-
-      commit = buildable.metadata[commit_id]
-      assert_equal "This commit will fail", commit[:message]
-      assert_equal Time.now.min,            commit[:committed_at].min
-    end
-
-    test "with multiple commits" do
-      2.times { repo.add_failing_commit }
-      commits = repo.commits.collect { |c| c[:identifier] }
-      Bob.build(buildable, commits)
-
-      assert_equal 3, buildable.metadata.length
-      assert_equal 3, buildable.builds.length
-    end
-
-    test "with a successful threaded build" do
-      old_engine = Bob.engine
-      begin
-        Thread.abort_on_exception = true
-        Bob.engine = Bob::BackgroundEngines::Threaded.new(5)
-        Bob.build(buildable, commit_id)
-        Bob.engine.wait!
-
-        status, output = buildable.builds[commit_id]
-        assert_equal :successful,          status
-        assert_equal "Running tests...\n", output
-
-        commit = buildable.metadata[commit_id]
-        assert_equal "This commit will work", commit[:message]
-        assert_equal Time.now.min,            commit[:committed_at].min
-      ensure
-        Bob.engine = old_engine
-      end
-    end
+    assert_same engine, Bob.engine
   end
 end

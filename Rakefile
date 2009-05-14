@@ -3,7 +3,11 @@ require "rake/testtask"
 begin
   require "hanna/rdoctask"
 rescue LoadError
-  require "rake/rdoctask"
+  begin
+    require "rdoc/task"
+  rescue LoadError
+    require "rake/rdoctask"
+  end
 end
 
 begin
@@ -25,9 +29,9 @@ Rake::TestTask.new(:test) do |t|
   t.test_files = FileList["test/*_test.rb"]
 end
 
-Rake::RDocTask.new do |rd|
-  rd.main = "README"
+(defined?(RDoc::Task) ? RDoc::Task : Rake::RDocTask).new do |rd|
+  rd.main = "README.rdoc"
   rd.title = "Documentation for Bob the Builder"
-  rd.rdoc_files.include("README", "LICENSE", "lib/**/*.rb")
+  rd.rdoc_files.include("README.rdoc", "LICENSE", "lib/**/*.rb")
   rd.rdoc_dir = "doc"
 end
